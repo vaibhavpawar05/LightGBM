@@ -175,6 +175,8 @@ def list_to_1d_numpy(data, dtype=np.float32, name='list'):
         if _get_bad_pandas_dtypes([data.dtypes]):
             raise ValueError('Series.dtypes must be int, float or bool')
         return np.array(data, dtype=dtype, copy=False)  # SparseArray should be supported as well
+    elif type(data).__name__ == 'Array': # for dask data
+        return data.compute().reshape(-1,).astype(dtype)
     else:
         raise TypeError(f"Wrong type({type(data).__name__}) for {name}.\n"
                         "It should be list, numpy 1-D array or pandas Series")
