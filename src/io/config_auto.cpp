@@ -303,6 +303,10 @@ const std::unordered_set<std::string>& Config::parameter_set() {
   "gpu_device_id",
   "gpu_use_dp",
   "num_gpu",
+  "position_bias_pos",
+  "position_bias_neg",
+  "pos_bias_file",
+  "bias_reg_p",
   });
   return params;
 }
@@ -630,6 +634,19 @@ void Config::GetMembersFromString(const std::unordered_map<std::string, std::str
 
   GetInt(params, "num_gpu", &num_gpu);
   CHECK_GT(num_gpu, 0);
+
+  if (GetString(params, "position_bias_pos", &tmp_str)) {
+    position_bias_pos = Common::StringToArray<double>(tmp_str, ',');
+  }
+
+  if (GetString(params, "position_bias_neg", &tmp_str)) {
+    position_bias_neg = Common::StringToArray<double>(tmp_str, ',');
+  }
+
+  GetString(params, "position_bias_file", &position_bias_file);
+  GetDouble(params, "bias_reg_p", &bias_reg_p);
+  CHECK_GT(bias_reg_p, 0.0);
+
 }
 
 std::string Config::SaveMembersToString() const {
@@ -739,6 +756,9 @@ std::string Config::SaveMembersToString() const {
   str_buf << "[gpu_device_id: " << gpu_device_id << "]\n";
   str_buf << "[gpu_use_dp: " << gpu_use_dp << "]\n";
   str_buf << "[num_gpu: " << num_gpu << "]\n";
+  str_buf << "[position_bias_pos: " << Common::Join(position_bias_pos, ",") << "]\n";
+  str_buf << "[position_bias_neg: " << Common::Join(position_bias_neg, ",") << "]\n";
+  str_buf << "[bias_reg_p: " << bias_reg_p << "]\n";
   return str_buf.str();
 }
 
