@@ -361,6 +361,73 @@ class RankXENDCG : public RankingObjective {
  private:
   mutable std::vector<Random> rands_;
 };
+  
+class UnbiasedRanknet : public RankingObjective {
+ public:
+  explicit UnbiasedRanknet(const Config& config) : RankingObjective(config) {
+    position_bias_pos_ = config.position_bias_pos;
+    position_bias_neg_ = config.position_bias_neg;
+    //Log::Info(config.bias_file.c_str());
+    //Log::Info("pos bias: %f, %f, %f", pos_bias_[0], pos_bias_[1], pos_bias_[2]);
+    //Log::Info("pos bias: %f, %f, %f", position_bias_pos_[0], position_bias_neg_[1], position_bias_pos_[0] * position_bias_neg_[1]);
+  }
+
+  explicit UnbiasedRanknet(const std::vector<std::string>& strs)
+      : RankingObjective(strs) {}
+
+  ~UnbiasedRanknet() {}
+
+  void Init(const Metadata& metadata, data_size_t num_data) override {
+    RankingObjective::Init(metadata, num_data);
+    for (data_size_t i = 0; i < num_queries_; ++i) {
+      rands_.emplace_back(seed_ + i);
+    }
+    //Log::Info("test UnbiasedRanknet");
+  }
+
+  inline void GetGradientsForOneQuery(data_size_t query_id, data_size_t cnt,
+                                      const label_t* label, const double* score,
+                                      score_t* lambdas,
+                                      score_t* hessians) const override {
+    
+    double grad_i = 0;
+    double hess_i = 0;
+    double p_i, p_j, p_ij, o_ij, eo_ij, w;
+
+    for (data_size_t i = 0; i < cnt; ++i) {
+        grad_i = 0;
+        hess_i = 0;
+        for (data_size_t j = 0; j < cnt; ++j) {
+            if (i != j) {
+                p_i = label[i];
+                p_j = label[j];
+                if (p_i != p_j) {
+                    if (p_i > p_j) {
+                        p_ij = 1;
+                        w = position_bias_pos_[i] * position_bias_neg_[j];
+                    } else {
+                        p_ij = 0;
+                        w = position_bias_pos_[j] * position_bias_neg_[i];
+                    }
+                    o_ij = score[i] - score[j];
+                    eo_ij = std::exp(o_ij);
+                    grad_i += ((-1 * p_ij) + (eo_ij / (1 + eo_ij))) / w;
+                    hess_i += (eo_ij / ((1 + eo_ij) * (1 + eo_ij))) / w;
+                }
+            }
+        }
+        lambdas[i] = grad_i;
+        hessians[i] = hess_i;
+    }
+  }
+
+  const char* GetName() const override { return "unbiased_ranknet"; }
+
+ private:
+  mutable std::vector<Random> rands_;
+  std::vector<double> position_bias_pos_;
+  std::vector<double> position_bias_neg_;
+};
 
 }  // namespace LightGBM
 #endif  // LightGBM_OBJECTIVE_RANK_OBJECTIVE_HPP_
