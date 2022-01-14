@@ -891,6 +891,14 @@ struct Config {
   // desc = relevant gain for labels. For example, the gain of label ``2`` is ``3`` in case of default label gains
   // desc = separate by ``,``
   std::vector<double> label_gain;
+  
+  std::vector<double> position_bias_pos;
+
+  std::vector<double> position_bias_neg;
+
+  std::string position_bias_file = "";
+
+  double bias_reg_p = 1.0;
 
   #pragma endregion
 
